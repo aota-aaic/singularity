@@ -1,0 +1,60 @@
+#!/bin/bash                                                                                                                                   
+
+prepare_iblibs() {
+    local ibliblist
+    ibliblist=$(mktemp ${TMPDIR:-/tmp}/.singularity-ibliblist.XXXXXXXX)
+    cat "${SINGULARITY_sysconfdir}/singularity/ibliblist.conf" \
+        | grep -Ev "^#|^\s*$" \
+        > ${ibliblist}
+
+    for lib in $(cat ${ibliblist}); do
+        local path="/lib64/${lib}"
+        if [[ -f ${path} ]]; then
+            message 2 "Found IB library: ${lib}\n"
+            if [[ -z "${SINGULARITY_CONTAINLIBS:-}" ]]; then
+                SINGULARITY_CONTAINLIBS="${path}"
+            else
+                SINGULARITY_CONTAINLIBS="${SINGULARITY_CONTAINLIBS},${path}"
+            fi
+        fi
+    done
+    rm ${ibliblist}
+
+    if [[ -z "${SINGULARITY_CONTAINLIBS:-}" ]]; then
+        message WARN "Could not find any IB-related libraries on this host!\n";
+    else
+        export SINGULARITY_CONTAINLIBS
+    fi
+}
+
+logger() {
+    local syslog_facility='local2.info'
+    local cmdline="/bin/logger -p ${syslog_facility}"
+
+    cmdline="${cmdline} image=${SINGULARITY_IMAGE}"
+    cmdline="${cmdline} logname=${LOGNAME}"
+    if [[ ! -z "${JOB_ID:-}" ]]; then
+        cmdline="${cmdline} jobid=${JOB_ID}"
+    fi
+    if [[ ! -z "${SGE_TASK_ID:-}" ]]; then
+        cmdline="${cmdline} taskid=${SGE_TASK_ID}"
+    fi
+
+    ${cmdline}
+}
+
+get_my_rank() {
+    local my_rank=0
+    if [[ ! -z "${OMPI_COMM_WORLD_RANK:-}" ]]; then
+        # Open MPI
+        my_rank="${OMPI_COMM_WORLD_RANK}"
+    elif [[ ! -z "${PMI_RANK:-}" ]]; then
+        # MVAPICH2-GDR, Intel MPI
+        my_rank="${PMI_RANK}"
+    else
+        # Non MPI
+        :
+    fi
+
+    /bin/echo ${my_rank}
+}

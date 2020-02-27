@@ -37,3 +37,10 @@ export SINGULARITYENV_PATH
 # Don't save the shell's HISTFILE
 SINGULARITYENV_HISTFILE=""
 export SINGULARITYENV_HISTFILE
+
+# For Infiniband setting on AAIC
+source $SINGULARITY_sysconfdir/singularity/ibliblist-functions
+prepare_iblibs
+if [ $(get_my_rank) -eq 0 ]; then
+    logger
+fi
