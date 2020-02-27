@@ -280,25 +280,33 @@ def get_cache(subfolder=None, quiet=False):
         cache_base = "%s/%s" % (cache_base, subfolder)
 
     # Create the cache folder(s), if don't exist
-    create_folders(cache_base)
+    create_folders(cache_base, 0o700)
 
     if not quiet:
         bot.info("Cache folder set to %s" % cache_base)
     return cache_base
 
 
-def create_folders(path):
+def create_folders(path, mode):
     '''create_folders attempts to get the same functionality as mkdir -p
     :param path: the path to create.
     '''
     try:
-        os.makedirs(path)
+        os.makedirs(path, mode)
     except OSError as e:
         if e.errno == errno.EEXIST and os.path.isdir(path):
             pass
         else:
             bot.error("Error creating path %s, exiting." % path)
             sys.exit(1)
+
+    try:
+        if (os.stat(path).st_mode & 0o777) != mode:
+            bot.info("Setting %o permissions on folder %s" % (mode, path))
+            os.chmod(path, mode)
+    except OSError as e:
+        bot.warning("Could not set %o permissions on folder %s" % (mode, path))
+
 
 
 ############################################################################

@@ -54,6 +54,29 @@ else
     exit 1
 fi
 
+message 5 "Securing .singularity directory"
+if ! USERID=`id -ru`; then
+        message ERROR "Could not ascertain user ID\n"
+        exit 255
+fi
+
+if ! HOME=`getent passwd ${USERID} | cut -d: -f6`; then
+    message ERROR "Could not discover user's home directory\n"
+    ABORT 255
+fi
+
+# Force 700 on an existing directory
+if [ -d "${HOME}/.singularity" ]; then
+    if ! chmod -f 700 "${HOME}/.singularity"; then
+        message WARN "Could not ensure secure 700 permissions on ${HOME}/.singularity\n"
+    fi
+else
+# Create new with 700 immediately
+    if ! mkdir -p -m 700 "${HOME}/.singularity"; then
+        message WARN "Could not create ${HOME}/.singularity directory\n"
+    fi
+fi
+
 message 5 "Starting argument loop\n"
 
 while true; do
